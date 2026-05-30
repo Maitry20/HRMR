@@ -84,7 +84,7 @@ const ROAST_PERSONAS = [
   },
   {
     id: 'thought-leader',
-    keywords: ['influencer', 'thought', 'leader', 'growth', 'content', 'creator', 'branding', 'advisor'],
+    keywords: ['influencer', 'thought leader', 'thought leadership', 'growth hacking', 'content creator', 'personal branding', 'keynote speaker', 'advisor'],
     verdict: 'roasted' as const,
     score: 3,
     one_liner: "The main source of carbon emissions from LinkedIn servers. Absolute pure corporate fluff.",
@@ -102,7 +102,7 @@ const ROAST_PERSONAS = [
   },
   {
     id: 'rust-systems',
-    keywords: ['rust', 'c++', 'systems', 'assembly', 'low-level', 'embedded', 'kernel', 'compilers'],
+    keywords: ['rust', 'c++', 'systems programming', 'assembly', 'low-level dev', 'embedded systems', 'kernel dev', 'compiler engineering'],
     verdict: 'roasted' as const,
     score: 5,
     one_liner: "A memory-safe crusader who spends three weeks fighting the borrow checker to write a hello-world microservice.",
@@ -156,7 +156,7 @@ const ROAST_PERSONAS = [
   },
   {
     id: 'quiet-quitter',
-    keywords: ['senior', 'associate', 'corporate', 'enterprise', 'manager', 'specialist', 'quiet'],
+    keywords: ['corporate speak', 'corporate developer', 'enterprise software', 'quiet quitter', 'quiet quitting', 'jira warrior'],
     verdict: 'roasted' as const,
     score: 4,
     one_liner: "A master of moving Jira tickets from 'In Progress' to 'Blocker' with minimal muscular effort.",
@@ -174,7 +174,7 @@ const ROAST_PERSONAS = [
   },
   {
     id: 'bootcamper',
-    keywords: ['student', 'intern', 'university', 'college', 'learner', 'aspiring', 'bootcamp', 'graduate'],
+    keywords: ['student developer', 'software intern', 'university student', 'aspiring dev', 'bootcamp grad', 'bootcamp graduate'],
     verdict: 'roasted' as const,
     score: 5,
     one_liner: "Your passion is inspiring, but your 'Incoming Software Engineer Intern' title is counting chickens before they hatch.",
@@ -192,7 +192,7 @@ const ROAST_PERSONAS = [
   },
   {
     id: 'data-scientist',
-    keywords: ['python', 'data', 'science', 'machine', 'learning', 'pytorch', 'tensor', 'numpy', 'jupyter', 'sagemaker', 'tensorflow', 'deep learning', 'ai', 'artificial intelligence'],
+    keywords: ['python', 'data science', 'machine learning', 'pytorch', 'tensor', 'numpy', 'jupyter', 'sagemaker', 'tensorflow', 'deep learning', 'artificial intelligence'],
     verdict: 'roasted' as const,
     score: 3,
     one_liner: "You think you're an AI researcher but your entire job is importing Scikit-Learn and running `.fit()` on clean CSV files.",
@@ -210,7 +210,7 @@ const ROAST_PERSONAS = [
   },
   {
     id: 'typescript-dd',
-    keywords: ['typescript', 'java', 'c#', 'object-oriented', 'architecture', 'design', 'patterns', 'clean'],
+    keywords: ['typescript', 'java', 'c#', 'object-oriented', 'clean architecture', 'domain-driven design', 'design patterns'],
     verdict: 'roasted' as const,
     score: 4,
     one_liner: "Spending 4 hours writing complex, nested TypeScript utility types and abstract interfaces to build a single static form.",
@@ -228,7 +228,7 @@ const ROAST_PERSONAS = [
   },
   {
     id: 'agile-scrum',
-    keywords: ['agile', 'scrum', 'pmp', 'product', 'manager', 'master', 'synergy', 'ceo', 'founder', 'leader'],
+    keywords: ['agile', 'scrum master', 'pmp', 'product manager', 'scrum synergy', 'ceo', 'co-founder', 'founder', 'thought leader'],
     verdict: 'roasted' as const,
     score: 4,
     one_liner: "A master of scheduled meetings who turns 5-minute technical clarifications into 1-hour standups.",
@@ -246,7 +246,7 @@ const ROAST_PERSONAS = [
   },
   {
     id: 'excel-analyst',
-    keywords: ['excel', 'data entry', 'analyst', 'powerpoint', 'word', 'office'],
+    keywords: ['excel', 'data entry', 'excel analyst', 'powerpoint', 'word', 'office'],
     verdict: 'roasted' as const,
     score: 4,
     one_liner: "The spreadsheet warrior. You've automated nothing and manually copy cells for 40 hours a week.",
