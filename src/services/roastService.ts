@@ -389,22 +389,119 @@ function hashString(str: string): number {
   // If user explicitly chose "Hired" OR (chose Random and hits the 15% random chance)
   const resolveAsHired = outcome === 'hired' || (outcome === 'random' && Math.random() < 0.15);
   
-  if (outcome === 'roasted' || !resolveAsHired) {
-    // 1. Direct Keyword Matching (Highest priority)
-    for (const item of ROAST_PERSONAS) {
-      if (item.keywords.some((kw) => matchKeyword(searchContent, kw))) {
-        return {
-          verdict: item.verdict,
-          score: item.score,
-          one_liner: item.one_liner,
-          roast_lines: [...item.roast_lines],
-          fixes: [...item.fixes],
-        };
+  // 1. Scan and score each persona based on matched keywords
+  const personaMatches: Array<{
+    persona: typeof ROAST_PERSONAS[0];
+    score: number;
+    matchedKeywords: string[];
+  }> = [];
+
+  for (const persona of ROAST_PERSONAS) {
+    let score = 0;
+    const matched: string[] = [];
+    for (const kw of persona.keywords) {
+      if (matchKeyword(searchContent, kw)) {
+        score++;
+        matched.push(kw);
       }
     }
+    if (score > 0) {
+      personaMatches.push({ persona, score, matchedKeywords: matched });
+    }
+  }
 
-    // 2. Hashing Router for consistent diversity (different inputs consistently get different personas)
-    // For copy-paste text type, hash the searchContent directly so different texts result in different personas
+  // Sort by match score descending
+  personaMatches.sort((a, b) => b.score - a.score);
+
+  if (outcome === 'roasted' || !resolveAsHired) {
+    if (personaMatches.length > 0) {
+      const primary = personaMatches[0];
+      const secondary = personaMatches[1] || null;
+
+      // Compile dynamic roast lines
+      const dynamicRoastLines: string[] = [];
+      const dynamicFixes: string[] = [];
+
+      // Add primary roast lines (up to 3)
+      dynamicRoastLines.push(...primary.persona.roast_lines.slice(0, 3));
+      dynamicFixes.push(...primary.persona.fixes.slice(0, 3));
+
+      // If secondary exists, take up to 2 from secondary for a rich combined profile roast!
+      if (secondary) {
+        dynamicRoastLines.push(...secondary.persona.roast_lines.slice(0, 2));
+        dynamicFixes.push(...secondary.persona.fixes.slice(0, 2));
+      }
+
+      // Now, let's inject hyper-targeted items for specific high-value keywords!
+      if (searchContent.includes('aws') || searchContent.includes('lambda')) {
+        if (searchContent.includes('sagemaker') || searchContent.includes('pytorch') || searchContent.includes('tensorflow')) {
+          dynamicRoastLines.push(
+            "Brags about serverless ML deployments using Lambda & SageMaker, but your functions probably cold-start for 20 seconds loading PyTorch containers."
+          );
+        } else {
+          dynamicRoastLines.push(
+            "Architecting AWS solutions using S3 and Lambda is just a fancy way of saying you write glue code for cloud-hosted bucket triggers."
+          );
+        }
+        dynamicFixes.push("Prune your AWS Lambda zip sizes and bundle dependencies to avoid 15-second cold starts.");
+      }
+
+      if (searchContent.includes('quicksight')) {
+        dynamicRoastLines.push(
+          "Boasting about 'real-time analytics with QuickSight' is a bold choice. We all know QuickSight is just slow-loading Excel charts with an enterprise licensing fee."
+        );
+        dynamicFixes.push("Stop paying for QuickSight licenses just to draw pie charts that could have been a static markdown table.");
+      }
+
+      if (searchContent.includes('sagemaker') && !searchContent.includes('aws')) {
+        dynamicRoastLines.push(
+          "You love SageMaker mostly because it lets you burn through company cloud computing budgets while waiting for a single training epoch."
+        );
+      }
+
+      if (searchContent.includes('devops') && (searchContent.includes('ci/cd') || searchContent.includes('docker'))) {
+        dynamicRoastLines.push(
+          "Your CI/CD pipelines look like an absolute crime scene of failed GitHub Action runs with names like 'fix devops config v14'."
+        );
+        dynamicFixes.push("Stop naming your git commits 'fix yaml config' and learn to test your docker builds locally.");
+      }
+
+      // Ensure we have unique roast lines and at least 5-6 points!
+      const uniqueRoastLines = Array.from(new Set(dynamicRoastLines));
+      const uniqueFixes = Array.from(new Set(dynamicFixes));
+
+      // Pad roast lines up to 6 if they are fewer
+      let fallbackIdx = 0;
+      while (uniqueRoastLines.length < 6 && primary.persona.roast_lines.length > 0) {
+        const line = primary.persona.roast_lines[fallbackIdx % primary.persona.roast_lines.length];
+        if (!uniqueRoastLines.includes(line)) {
+          uniqueRoastLines.push(line);
+        }
+        fallbackIdx++;
+        if (fallbackIdx > 12) break; // break loops
+      }
+
+      // Pad fixes up to 5 if they are fewer
+      fallbackIdx = 0;
+      while (uniqueFixes.length < 5 && primary.persona.fixes.length > 0) {
+        const fix = primary.persona.fixes[fallbackIdx % primary.persona.fixes.length];
+        if (!uniqueFixes.includes(fix)) {
+          uniqueFixes.push(fix);
+        }
+        fallbackIdx++;
+        if (fallbackIdx > 12) break; // break loops
+      }
+
+      return {
+        verdict: primary.persona.verdict,
+        score: primary.persona.score,
+        one_liner: primary.persona.one_liner,
+        roast_lines: uniqueRoastLines.slice(0, 6),
+        fixes: uniqueFixes.slice(0, 5),
+      };
+    }
+
+    // 2. Fallback Hashing Router if no keywords match
     const hashKey = input.type === 'text' ? searchContent : (handle || 'default');
     const index = hashString(hashKey) % ROAST_PERSONAS.length;
     const selectedRoast = ROAST_PERSONAS[index];
@@ -418,8 +515,25 @@ function hashString(str: string): number {
     };
   }
 
-  // Otherwise, resolve as Hired (either index 0 or index 1 based on hashing)
+  // Otherwise, resolve as Hired
   const hashKey = input.type === 'text' ? searchContent : (handle || 'default');
   const hiredIndex = hashString(hashKey) % HIRED_PROFILES.length;
-  return HIRED_PROFILES[hiredIndex];
+  const hiredProfile = HIRED_PROFILES[hiredIndex];
+
+  // Make hired profiles similarly rich
+  if (personaMatches.length > 0) {
+    const primary = personaMatches[0];
+    const customizedRoasts = [...hiredProfile.roast_lines];
+    if (primary.persona.id === 'data-scientist') {
+      customizedRoasts.unshift("Your machine learning skills actually solve business problems, unlike most who just draw boxes in Jupyter.");
+    } else if (primary.persona.id === 'yaml-engineer') {
+      customizedRoasts.unshift("You actually understand DevOps and infrastructure, rather than just writing generic Terraform copy-pastes.");
+    }
+    return {
+      ...hiredProfile,
+      roast_lines: Array.from(new Set(customizedRoasts)).slice(0, 5)
+    };
+  }
+
+  return hiredProfile;
 }
