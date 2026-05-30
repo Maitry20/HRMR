@@ -72,6 +72,11 @@ function App() {
       {/* Noise Texture Overlay for Premium Depth */}
       <div className="noise-overlay" />
 
+      {/* Floating Background Orbs for Premium Backdrop Depth */}
+      <div className="floating-orb orb-1 w-96 h-96 -top-20 -left-20" />
+      <div className="floating-orb orb-2 w-96 h-96 top-1/3 -right-20" />
+      <div className="floating-orb orb-3 w-80 h-80 -bottom-10 left-1/3" />
+
       {/* Top Header Navigation */}
       <header className="w-full max-w-6xl mx-auto px-6 py-5 flex items-center justify-between border-b border-white/5 relative z-10">
         <div 
