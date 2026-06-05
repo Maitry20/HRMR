@@ -429,15 +429,29 @@ function extractProfileDetails(text: string) {
 
 function generateDynamicRoast(
   details: ReturnType<typeof extractProfileDetails>,
+  searchContent: string,
   random: () => number,
   basePersona: typeof ROAST_PERSONAS[0]
 ) {
   const primaryTech = details.techs[0];
-  const secondaryTech = details.techs[1] || primaryTech;
+  let secondaryTech = details.techs[1] || '';
+  if (!secondaryTech) {
+    const otherTechs = TECH_KEYWORDS.filter(t => t !== primaryTech);
+    const hashIdx = hashString(primaryTech) % otherTechs.length;
+    secondaryTech = otherTechs[hashIdx];
+  }
+
   const primaryBuzz = details.buzzes[0];
-  const secondaryBuzz = details.buzzes[1] || primaryBuzz;
+  let secondaryBuzz = details.buzzes[1] || '';
+  if (!secondaryBuzz) {
+    const otherBuzzes = BUZZWORDS.filter(b => b !== primaryBuzz);
+    const hashIdx = hashString(primaryBuzz) % otherBuzzes.length;
+    secondaryBuzz = otherBuzzes[hashIdx];
+  }
+
   const title = details.title;
   const years = details.years;
+  const lowerText = searchContent.toLowerCase();
 
   const dynamicPool = [
     `Claims to be a ${title}, but your description reads like you've mostly been copy-pasting ${primaryTech} code from StackOverflow.`,
@@ -502,7 +516,41 @@ function generateDynamicRoast(
     }
   }
 
-  const finalRoastLines = [...selectedPersonaLines, ...selectedDynamicLines];
+  // Inject hyper-targeted items based on specific high-value achievements
+  const targetedRoasts: string[] = [];
+  const targetedFixes: string[] = [];
+
+  if (lowerText.includes('ambassador') || lowerText.includes('community builder') || lowerText.includes('ambassador')) {
+    targetedRoasts.push(
+      `An AWS Ambassador and Community Builder? So your main job is writing free marketing blogs for AWS in exchange for hoodies and stickers.`
+    );
+    targetedFixes.push(
+      "Stop spending your weekends writing tutorial blogs for AWS credits and go build an actual revenue-generating product."
+    );
+  }
+
+  if (lowerText.includes('certifications') || lowerText.includes('jacket') || lowerText.includes('certified')) {
+    targetedRoasts.push(
+      `12 AWS Certifications and a Golden Jacket? Congratulations on passing 12 multiple-choice exams, but can you actually debug a production incident without looking at StackOverflow?`
+    );
+    targetedFixes.push(
+      "Hang up the AWS Golden Jacket and focus on building actual systems instead of collecting PDF badges."
+    );
+  }
+
+  if (lowerText.includes('architect') || lowerText.includes('architecture')) {
+    targetedRoasts.push(
+      `As a Solution Architect, you draw beautiful boxes and arrows in Lucidchart, but developers have to actually write the code to fix your unfeasible multi-region designs.`
+    );
+  }
+
+  if (lowerText.includes('community') || lowerText.includes('meetup') || lowerText.includes('organizer') || lowerText.includes('user group')) {
+    targetedRoasts.push(
+      `Organized a community day for 650 people? That's a massive amount of coordination just to get developers to network over stale pizza and talk about Kubernetes.`
+    );
+  }
+
+  const finalRoastLines = [...targetedRoasts, ...selectedPersonaLines, ...selectedDynamicLines];
 
   // Customize the one-liner
   let oneLiner = basePersona.one_liner;
@@ -531,7 +579,7 @@ function generateDynamicRoast(
     `Delete the dramatic one-sentence paragraphs. You are a ${title}, not a LinkedIn influencer.`
   ];
 
-  const selectedFixes: string[] = [];
+  const selectedFixes: string[] = [...targetedFixes];
   const fixPoolCopy = [...dynamicFixPool];
   for (let i = 0; i < 2; i++) {
     const idx = Math.floor(random() * fixPoolCopy.length);
@@ -556,8 +604,18 @@ function generateDynamicRoast(
     }
   }
 
-  // Calculate a dynamic score seeded by input
-  const baseScore = basePersona.score;
+  // Calculate a dynamic score seeded by input and modified by seniority
+  let baseScore = basePersona.score;
+  if (lowerText.includes('architect') || lowerText.includes('senior') || lowerText.includes('lead')) {
+    baseScore += 2;
+  }
+  if (lowerText.includes('years of experience') || lowerText.includes('years of dev') || /7\+?\s*years/i.test(lowerText)) {
+    baseScore += 1;
+  }
+  if (lowerText.includes('certifications') || lowerText.includes('certified')) {
+    baseScore += 1;
+  }
+
   const scoreOffset = Math.floor(random() * 3) - 1; // -1, 0, or 1
   const finalScore = Math.max(1, Math.min(10, baseScore + scoreOffset));
 
@@ -571,11 +629,13 @@ function generateDynamicRoast(
 
 function generateDynamicHired(
   details: ReturnType<typeof extractProfileDetails>,
+  searchContent: string,
   random: () => number,
   baseProfile: typeof HIRED_PROFILES[0]
 ) {
   const primaryTech = details.techs[0];
   const title = details.title;
+  const lowerText = searchContent.toLowerCase();
 
   const customizedLines = baseProfile.roast_lines.map(line => {
     return line
@@ -588,6 +648,17 @@ function generateDynamicHired(
     `Successfully avoided adding unnecessary buzzwords to your ${title} description. A rare sight.`,
     `A ${title} who writes clean code and lists concrete results instead of empty philosophies.`
   ];
+
+  if (lowerText.includes('ambassador') || lowerText.includes('builder')) {
+    dynamicHiredLines.unshift(
+      `Your active tech advocacy as an AWS Ambassador is outstanding and shows true leadership.`
+    );
+  }
+  if (lowerText.includes('certifications') || lowerText.includes('certified')) {
+    dynamicHiredLines.unshift(
+      `Impressive credentials including Solutions Architect Professional certification.`
+    );
+  }
 
   const selectedHiredLines: string[] = [];
   const pool = [...customizedLines];
@@ -720,7 +791,7 @@ export async function roastProfile(
       selectedRoast = ROAST_PERSONAS[index];
     }
 
-    const dynamicRoast = generateDynamicRoast(details, random, selectedRoast);
+    const dynamicRoast = generateDynamicRoast(details, searchContent, random, selectedRoast);
 
     return {
       verdict: selectedRoast.verdict,
@@ -735,5 +806,5 @@ export async function roastProfile(
   const hiredIndex = Math.floor(random() * HIRED_PROFILES.length);
   const hiredProfile = HIRED_PROFILES[hiredIndex];
 
-  return generateDynamicHired(details, random, hiredProfile);
+  return generateDynamicHired(details, searchContent, random, hiredProfile);
 }
