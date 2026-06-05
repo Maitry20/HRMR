@@ -174,7 +174,7 @@ const ROAST_PERSONAS = [
   },
   {
     id: 'bootcamper',
-    keywords: ['student developer', 'software intern', 'university student', 'aspiring dev', 'bootcamp grad', 'bootcamp graduate'],
+    keywords: ['student developer', 'software intern', 'university student', 'aspiring dev', 'bootcamp grad', 'bootcamp graduate', 'intern', 'student', 'internship', 'university', 'college'],
     verdict: 'roasted' as const,
     score: 5,
     one_liner: "Your passion is inspiring, but your 'Incoming Software Engineer Intern' title is counting chickens before they hatch.",
@@ -206,6 +206,24 @@ const ROAST_PERSONAS = [
       "Learn standard software engineering principles. Write clean, modular Python modules (`.py` files) instead of chaotic Jupyter Notebooks.",
       "Stop calling yourself an 'AI Researcher' if you are just fine-tuning pre-trained models. You're an AI consumer—embrace it.",
       "Write unit tests for your data pipelines so they don't break every time the CSV schema changes."
+    ]
+  },
+  {
+    id: 'data-engineer',
+    keywords: ['data engineering', 'spark', 'kafka', 'hadoop', 'pipeline', 'pipelines', 'etl', 'airflow', 'data warehouse', 'databricks', 'snowflake', 'data engineer', 'comprehend', 'rekognition'],
+    verdict: 'roasted' as const,
+    score: 4,
+    one_liner: "You build complex distributed data pipelines just to move 50 rows of data from an Excel sheet to a database.",
+    roast_lines: [
+      "Listed Apache Spark and Kafka for a dataset that could easily fit in a single SQL table or even a browser local storage.",
+      "Your entire career is built around cleaning messy CSV files and calling it 'advanced data architecture'.",
+      "You spend weeks configuring Airflow DAGs and orchestration systems for tasks that could have been a simple cron job.",
+      "Claims to optimize 'scalable data workflows' but your pipelines break the moment a column header has a lowercase letter."
+    ],
+    fixes: [
+      "Stop using Spark cluster instances for data sizes that can be processed in a standard Python loop.",
+      "Learn database indexing and normal forms instead of just throwing more database clusters at slow queries.",
+      "Write integration tests for your data schemas so your pipelines don't crash every Monday morning."
     ]
   },
   {
@@ -374,16 +392,30 @@ function extractProfileDetails(text: string) {
   
   // Extract job title
   let title = '';
-  const titles = [
-    'software engineer', 'developer', 'frontend engineer', 'backend engineer',
-    'full stack developer', 'data scientist', 'product manager', 'scrum master',
-    'designer', 'ui/ux designer', 'devops engineer', 'analyst', 'founder', 'ceo',
-    'creator', 'intern', 'student'
-  ];
-  for (const t of titles) {
-    if (lowerText.includes(t)) {
-      title = t;
-      break;
+  
+  // Try pattern matching first for highly accurate custom titles (e.g. "As a Data Engineering and AWS Intern,")
+  const titleMatch = text.match(/(?:as|i\s+am|working\s+as)\s+a\s+([^,.\n]+)/i);
+  if (titleMatch) {
+    title = titleMatch[1].trim();
+    // Clean up title if it's too long
+    if (title.length > 50) {
+      title = title.substring(0, 50);
+    }
+  }
+  
+  // Fallback to static list matching
+  if (!title) {
+    const titles = [
+      'software engineer', 'developer', 'frontend engineer', 'backend engineer',
+      'full stack developer', 'data scientist', 'product manager', 'scrum master',
+      'designer', 'ui/ux designer', 'devops engineer', 'analyst', 'founder', 'ceo',
+      'creator', 'intern', 'student'
+    ];
+    for (const t of titles) {
+      if (lowerText.includes(t)) {
+        title = t;
+        break;
+      }
     }
   }
   
@@ -428,9 +460,25 @@ function generateDynamicRoast(
     selectedDynamicLines.push(poolCopy.splice(idx, 1)[0]);
   }
 
+  const STATIC_ROLES = [
+    'AI Visionary', 'AI engineer', 'Prompt Specialist', 'Community Architect',
+    'Senior Frontend Engineer', 'Cloud Architect', 'Strategy Evangelist',
+    'AI Research Scientist', 'Aspiring Full Stack Ninja', 'Incoming Software Engineer Intern',
+    'Certified Scrum Product Owner', 'detail-oriented data professional',
+    'software engineer', 'developer', 'frontend engineer', 'backend engineer',
+    'Data Scientist', 'Scrum Master', 'Product Manager', 'designer'
+  ];
+
   // Customize the base persona's roast lines
   const customizedPersonaLines = basePersona.roast_lines.map(line => {
-    return line
+    let customizedLine = line;
+    for (const role of STATIC_ROLES) {
+      const isSimpleWord = /^[a-z]+$/i.test(role) || role.toLowerCase() === 'software engineer';
+      const pattern = isSimpleWord ? `\\b${role}\\b` : role;
+      const regex = new RegExp(pattern, 'gi');
+      customizedLine = customizedLine.replace(regex, title);
+    }
+    return customizedLine
       .replace(/Prompt Engineering/gi, `${primaryTech} engineering`)
       .replace(/Claude 3\.5/gi, primaryTech)
       .replace(/Tailwind/gi, primaryTech === 'css' || primaryTech === 'html' ? 'raw hex codes' : 'Tailwind')
@@ -458,6 +506,12 @@ function generateDynamicRoast(
 
   // Customize the one-liner
   let oneLiner = basePersona.one_liner;
+  for (const role of STATIC_ROLES) {
+    const isSimpleWord = /^[a-z]+$/i.test(role) || role.toLowerCase() === 'software engineer';
+    const pattern = isSimpleWord ? `\\b${role}\\b` : role;
+    const regex = new RegExp(pattern, 'gi');
+    oneLiner = oneLiner.replace(regex, title);
+  }
   oneLiner = oneLiner
     .replace(/AI engineer/gi, `${primaryTech} developer`)
     .replace(/OpenAI/gi, primaryTech)
