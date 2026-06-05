@@ -227,6 +227,23 @@ const ROAST_PERSONAS = [
     ]
   },
   {
+    id: 'finops-consultant',
+    keywords: ['finops', 'cost optimization', 'cost explorer', 'cloudhealth', 'cloudability', 'anodot', 'billing', 'cloud cost', 'budgeting', 'saving plans', 'reserved instances', 'financial'],
+    verdict: 'roasted' as const,
+    score: 4,
+    one_liner: "You spend your entire week writing reports on how to save $14 on S3 storage while your team burns $20k a day on idle dev databases.",
+    roast_lines: [
+      "Your main job is nagging developers to delete orphaned EBS volumes and telling them they're over-provisioning their instances.",
+      "Listed 'FinOps Certified Professional' to make telling people to turn off their development servers over the weekend sound like a science.",
+      "You write 40-page PDFs detailing how cloud costs rose by 3% last month, but nobody in the engineering team has ever read past page 1.",
+      "You get excited about buying Reserved Instances and Savings Plans, which is just financial gambling with your company's credit card."
+    ],
+    fixes: [
+      "Actually help developers refactor their code to be more efficient instead of just sending them automated Jira cost alerts.",
+      "Stop calling yourself a 'Cloud Cost Wizard' when you're just a spreadsheet auditor who knows how to open AWS Cost Explorer."
+    ]
+  },
+  {
     id: 'typescript-dd',
     keywords: ['typescript', 'java', 'c#', 'object-oriented', 'clean architecture', 'domain-driven design', 'design patterns'],
     verdict: 'roasted' as const,
@@ -355,7 +372,8 @@ const TECH_KEYWORDS = [
   'react', 'typescript', 'javascript', 'python', 'aws', 'docker', 'kubernetes',
   'figma', 'excel', 'rust', 'c++', 'java', 'c#', 'sql', 'nextjs', 'tailwind',
   'html', 'css', 'vue', 'angular', 'svelte', 'terraform', 'git', 'node', 'django',
-  'sagemaker', 'pytorch', 'tensorflow', 'quicksight', 'openai', 'llm', 'gemini'
+  'sagemaker', 'pytorch', 'tensorflow', 'quicksight', 'openai', 'llm', 'gemini',
+  'finops', 'ansible'
 ];
 
 const BUZZWORDS = [
@@ -364,6 +382,29 @@ const BUZZWORDS = [
   'team player', 'expert', 'dynamic', 'detail-oriented', 'visionary', 'evangelist',
   'resilience', 'champion', 'spearheaded'
 ];
+
+function cleanExtractedTitle(rawTitle: string): string {
+  let cleaned = rawTitle.trim();
+  // Cut off at common relative clauses / prepositions that start descriptions
+  const cutOffPatterns = [
+    /\s+who\b/i,
+    /\s+with\b/i,
+    /\s+specializing\b/i,
+    /\s+at\b/i,
+    /\s+specializes\b/i,
+    /\s+passion\b/i,
+    /\s+is\b/i,
+    /\s+in\b/i,
+    /\s+for\b/i
+  ];
+  for (const pattern of cutOffPatterns) {
+    const idx = cleaned.search(pattern);
+    if (idx !== -1) {
+      cleaned = cleaned.substring(0, idx);
+    }
+  }
+  return cleaned.trim();
+}
 
 function extractProfileDetails(text: string) {
   const lowerText = text.toLowerCase();
@@ -396,10 +437,14 @@ function extractProfileDetails(text: string) {
   // Try pattern matching first for highly accurate custom titles (e.g. "As a Data Engineering and AWS Intern,")
   const titleMatch = text.match(/(?:as|i\s+am|working\s+as)\s+a\s+([^,.\n]+)/i);
   if (titleMatch) {
-    title = titleMatch[1].trim();
-    // Clean up title if it's too long
-    if (title.length > 50) {
-      title = title.substring(0, 50);
+    title = cleanExtractedTitle(titleMatch[1]);
+  }
+  
+  // Try matching start of profile if it starts with "A [Title]" or "An [Title]"
+  if (!title) {
+    const startMatch = text.match(/^\s*(?:a|an)\s+([^,.\n]+)/i);
+    if (startMatch) {
+      title = cleanExtractedTitle(startMatch[1]);
     }
   }
   
@@ -417,6 +462,11 @@ function extractProfileDetails(text: string) {
         break;
       }
     }
+  }
+  
+  // Clean up title if it's too long
+  if (title.length > 50) {
+    title = title.substring(0, 50);
   }
   
   return {
@@ -520,19 +570,34 @@ function generateDynamicRoast(
   const targetedRoasts: string[] = [];
   const targetedFixes: string[] = [];
 
-  if (lowerText.includes('ambassador') || lowerText.includes('community builder') || lowerText.includes('ambassador')) {
+  if (lowerText.includes('ambassador')) {
     targetedRoasts.push(
-      `An AWS Ambassador and Community Builder? So your main job is writing free marketing blogs for AWS in exchange for hoodies and stickers.`
+      `An AWS Ambassador? So your main job is writing free marketing blogs for Amazon in exchange for a couple of hoodies and a certificate.`
     );
     targetedFixes.push(
       "Stop spending your weekends writing tutorial blogs for AWS credits and go build an actual revenue-generating product."
     );
+  } else if (lowerText.includes('community builder')) {
+    targetedRoasts.push(
+      `An AWS Community Builder? Congratulations on doing unpaid technical writing for a trillion-dollar company in exchange for $500 of AWS credits.`
+    );
+    targetedFixes.push(
+      "Stop spending your weekends writing tutorial blogs for AWS credits."
+    );
   }
 
-  if (lowerText.includes('certifications') || lowerText.includes('jacket') || lowerText.includes('certified')) {
-    targetedRoasts.push(
-      `12 AWS Certifications and a Golden Jacket? Congratulations on passing 12 multiple-choice exams, but can you actually debug a production incident without looking at StackOverflow?`
-    );
+  if (lowerText.includes('certifications') || lowerText.includes('certified') || lowerText.includes('jacket')) {
+    const certMatch = searchContent.match(/(\d+)x?\s*aws\s*cert/i) || searchContent.match(/(\d+)\s*certifications/i) || searchContent.match(/(\d+)x?\s*certified/i);
+    const certCount = certMatch ? certMatch[1] : '';
+    if (certCount) {
+      targetedRoasts.push(
+        `${certCount} AWS Certifications and a Golden Jacket? Congratulations on passing ${certCount} multiple-choice exams, but can you actually debug a production incident without looking at StackOverflow?`
+      );
+    } else {
+      targetedRoasts.push(
+        `AWS Certifications and a Golden Jacket? Congratulations on passing multiple-choice exams, but can you actually debug a production incident without looking at StackOverflow?`
+      );
+    }
     targetedFixes.push(
       "Hang up the AWS Golden Jacket and focus on building actual systems instead of collecting PDF badges."
     );
@@ -540,13 +605,27 @@ function generateDynamicRoast(
 
   if (lowerText.includes('architect') || lowerText.includes('architecture')) {
     targetedRoasts.push(
-      `As a Solution Architect, you draw beautiful boxes and arrows in Lucidchart, but developers have to actually write the code to fix your unfeasible multi-region designs.`
+      `As a Solution Architect, you draw beautiful boxes and arrows in Lucidchart, but developers have to actually write the code to fix your unfeasible designs.`
     );
   }
 
-  if (lowerText.includes('community') || lowerText.includes('meetup') || lowerText.includes('organizer') || lowerText.includes('user group')) {
+  if (lowerText.includes('community day')) {
     targetedRoasts.push(
-      `Organized a community day for 650 people? That's a massive amount of coordination just to get developers to network over stale pizza and talk about Kubernetes.`
+      `Organized an AWS Community Day? That's a massive amount of coordination just to get developers to network over stale pizza and talk about S3 buckets.`
+    );
+  }
+
+  if (lowerText.includes('user group') || lowerText.includes('meetup')) {
+    targetedRoasts.push(
+      `Co-organizing local meetups is a great way to talk about cloud technologies to an audience of 15 people, 10 of whom are only there for the free pizza.`
+    );
+  }
+
+  if (/speaker|speaking|spoke|talks/i.test(lowerText) && /events|conferences|meetups|talks/i.test(lowerText)) {
+    const eventMatch = searchContent.match(/(\d+)\+?\s*(?:events|conferences|talks|meetups)/i);
+    const count = eventMatch ? eventMatch[1] : 'dozens of';
+    targetedRoasts.push(
+      `Spoke at ${count} events and conferences? That is a lot of airport security lines and repetitive slides just to tell people to turn off their idle servers.`
     );
   }
 
