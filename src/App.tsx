@@ -16,6 +16,12 @@ function App() {
 
   const isLight = activeView === 'result' && roastResult?.verdict === 'hired';
 
+  const handleReset = () => {
+    setRoastResult(null);
+    setError(null);
+    setActiveView('landing');
+  };
+
   // Keyboard shortcut listener: Press R to Roast Again
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -46,9 +52,10 @@ function App() {
       const result = await roastProfile(input, outcome);
       setRoastResult(result);
       setActiveView('result');
-    } catch (err: any) {
+    } catch (err: unknown) {
       console.error(err);
-      setError(err?.message || 'Something went wrong while auditing your profile. Please try again!');
+      const errorMessage = err instanceof Error ? err.message : 'Something went wrong while auditing your profile. Please try again!';
+      setError(errorMessage);
       setActiveView('landing');
     }
   };
@@ -58,16 +65,12 @@ function App() {
     const params = new URLSearchParams(window.location.search);
     const aboutText = params.get('about');
     if (aboutText) {
-      handleRoastSubmit({ type: 'text', data: decodeURIComponent(aboutText) }, 'random');
+      setTimeout(() => {
+        handleRoastSubmit({ type: 'text', data: decodeURIComponent(aboutText) }, 'random');
+      }, 0);
       window.history.replaceState({}, document.title, window.location.pathname);
     }
   }, []);
-
-  const handleReset = () => {
-    setRoastResult(null);
-    setError(null);
-    setActiveView('landing');
-  };
 
   return (
     <div className={`min-h-screen flex flex-col relative select-none font-sans overflow-hidden transition-colors duration-500 ${

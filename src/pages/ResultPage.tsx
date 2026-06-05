@@ -11,10 +11,15 @@ const TypewriterLine: React.FC<{ text: string; delay?: number; onComplete?: () =
   isLight = false,
 }) => {
   const [displayed, setDisplayed] = useState('');
+  const [prevText, setPrevText] = useState(text);
+
+  if (text !== prevText) {
+    setDisplayed('');
+    setPrevText(text);
+  }
 
   useEffect(() => {
     let index = 0;
-    setDisplayed('');
     
     const timer = setInterval(() => {
       if (index < text.length) {
@@ -27,7 +32,7 @@ const TypewriterLine: React.FC<{ text: string; delay?: number; onComplete?: () =
     }, delay);
 
     return () => clearInterval(timer);
-  }, [text, delay]);
+  }, [text, delay, onComplete]);
 
   return (
     <p 
@@ -65,7 +70,7 @@ export const ResultPage: React.FC<ResultPageProps> = ({ result, onReset }) => {
 
       const randomInRange = (min: number, max: number) => Math.random() * (max - min) + min;
 
-      const interval: any = setInterval(() => {
+      const interval = setInterval(() => {
         const timeLeft = animationEnd - Date.now();
 
         if (timeLeft <= 0) {

@@ -303,7 +303,7 @@ const HIRED_PROFILES = [
 // Checks if a keyword matches the text using regex word boundaries.
 // This prevents short strings like 'ai' from matching 'maintain' or 'training'.
 function matchKeyword(text: string, keyword: string): boolean {
-  const escaped = keyword.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&');
+  const escaped = keyword.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
   const hasSpecialSymbols = /[^a-zA-Z0-9]/.test(keyword);
   
   if (hasSpecialSymbols) {
@@ -324,10 +324,248 @@ function hashString(str: string): number {
   return Math.abs(hash);
 }
 
+// Seed-based pseudo-random number generator (LCG)
+function createRandom(seedStr: string) {
+  let hash = hashString(seedStr);
+  return function() {
+    hash = (hash * 1664525 + 1013904223) % 4294967296;
+    return hash / 4294967296;
+  };
+}
+
+const TECH_KEYWORDS = [
+  'react', 'typescript', 'javascript', 'python', 'aws', 'docker', 'kubernetes',
+  'figma', 'excel', 'rust', 'c++', 'java', 'c#', 'sql', 'nextjs', 'tailwind',
+  'html', 'css', 'vue', 'angular', 'svelte', 'terraform', 'git', 'node', 'django',
+  'sagemaker', 'pytorch', 'tensorflow', 'quicksight', 'openai', 'llm', 'gemini'
+];
+
+const BUZZWORDS = [
+  'disrupt', 'synergy', 'passionate', 'driven', 'ninja', 'guru', 'strategic',
+  'thought leader', 'solutions', 'innovated', 'motivated', 'results-oriented',
+  'team player', 'expert', 'dynamic', 'detail-oriented', 'visionary', 'evangelist',
+  'resilience', 'champion', 'spearheaded'
+];
+
+function extractProfileDetails(text: string) {
+  const lowerText = text.toLowerCase();
+  
+  // Extract technologies
+  const techs = TECH_KEYWORDS.filter(tech => {
+    const escaped = tech.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+    return regex.test(lowerText);
+  });
+  
+  // Extract buzzwords
+  const buzzes = BUZZWORDS.filter(buzz => {
+    const escaped = buzz.replace(/[-/\\^$*+?.()|[\]{}]/g, '\\$&');
+    const regex = new RegExp(`\\b${escaped}\\b`, 'i');
+    return regex.test(lowerText);
+  });
+  
+  // Extract years of experience
+  let years = '';
+  const yearsRegex = /(\d+)\+?\s*years?/i;
+  const match = text.match(yearsRegex);
+  if (match) {
+    years = match[1];
+  }
+  
+  // Extract job title
+  let title = '';
+  const titles = [
+    'software engineer', 'developer', 'frontend engineer', 'backend engineer',
+    'full stack developer', 'data scientist', 'product manager', 'scrum master',
+    'designer', 'ui/ux designer', 'devops engineer', 'analyst', 'founder', 'ceo',
+    'creator', 'intern', 'student'
+  ];
+  for (const t of titles) {
+    if (lowerText.includes(t)) {
+      title = t;
+      break;
+    }
+  }
+  
+  return {
+    techs: techs.length > 0 ? techs : ['coding'],
+    buzzes: buzzes.length > 0 ? buzzes : ['innovation'],
+    years: years || 'some',
+    title: title || 'professional'
+  };
+}
+
+function generateDynamicRoast(
+  details: ReturnType<typeof extractProfileDetails>,
+  random: () => number,
+  basePersona: typeof ROAST_PERSONAS[0]
+) {
+  const primaryTech = details.techs[0];
+  const secondaryTech = details.techs[1] || primaryTech;
+  const primaryBuzz = details.buzzes[0];
+  const secondaryBuzz = details.buzzes[1] || primaryBuzz;
+  const title = details.title;
+  const years = details.years;
+
+  const dynamicPool = [
+    `Claims to be a ${title}, but your description reads like you've mostly been copy-pasting ${primaryTech} code from StackOverflow.`,
+    `Using the word '${primaryBuzz}' in combination with ${primaryTech} is a bold strategy. The only thing you're '${primaryBuzz}'ing is the patience of hiring managers.`,
+    `You boast about your '${primaryBuzz}' workflow, but your primary contribution seems to be turning coffee into unresolved git merge conflicts.`,
+    `Your bio reads like an SEO keyword-stuffing project for '${primaryTech}', '${primaryBuzz}', and '${secondaryBuzz}'.`,
+    `You listed '${secondaryTech}' on your profile, presumably to scare away recruiters who actually understand how it works.`,
+    `The amount of '${primaryBuzz}' in your profile is single-handedly keeping the corporate synergy industry alive.`,
+    `A ${title} who lists '${primaryTech}' as a core competency is like a driver listing 'steering the wheel' as a special skill.`,
+    `If I had a dollar for every time you used the word '${primaryBuzz}', I could afford to pay someone to actually read your entire profile.`,
+    `Claims to have ${years === 'some' ? 'a lot of' : years + ' years of'} experience, yet you still write about ${primaryTech} like you just finished a weekend bootcamp.`,
+    `You talk about '${primaryBuzz}' and 'leadership', but you probably get nervous when someone asks you to explain what your ${primaryTech} app actually does.`
+  ];
+
+  // Pick 3 lines from the dynamic pool
+  const selectedDynamicLines: string[] = [];
+  const poolCopy = [...dynamicPool];
+  for (let i = 0; i < 3; i++) {
+    const idx = Math.floor(random() * poolCopy.length);
+    selectedDynamicLines.push(poolCopy.splice(idx, 1)[0]);
+  }
+
+  // Customize the base persona's roast lines
+  const customizedPersonaLines = basePersona.roast_lines.map(line => {
+    return line
+      .replace(/Prompt Engineering/gi, `${primaryTech} engineering`)
+      .replace(/Claude 3\.5/gi, primaryTech)
+      .replace(/Tailwind/gi, primaryTech === 'css' || primaryTech === 'html' ? 'raw hex codes' : 'Tailwind')
+      .replace(/React/gi, primaryTech)
+      .replace(/disrupt/gi, primaryBuzz)
+      .replace(/synergy/gi, primaryBuzz)
+      .replace(/SQL/gi, primaryTech)
+      .replace(/Kubernetes/gi, primaryTech)
+      .replace(/Jira/gi, 'Jira')
+      .replace(/Figma/gi, primaryTech)
+      .replace(/Excel/gi, primaryTech);
+  });
+
+  // Pick 3 lines from the customized persona lines
+  const selectedPersonaLines: string[] = [];
+  const personaCopy = [...customizedPersonaLines];
+  for (let i = 0; i < 3; i++) {
+    if (personaCopy.length > 0) {
+      const idx = Math.floor(random() * personaCopy.length);
+      selectedPersonaLines.push(personaCopy.splice(idx, 1)[0]);
+    }
+  }
+
+  const finalRoastLines = [...selectedPersonaLines, ...selectedDynamicLines];
+
+  // Customize the one-liner
+  let oneLiner = basePersona.one_liner;
+  oneLiner = oneLiner
+    .replace(/AI engineer/gi, `${primaryTech} developer`)
+    .replace(/OpenAI/gi, primaryTech)
+    .replace(/JPEG/gi, primaryTech)
+    .replace(/npm package/gi, `${primaryTech} package`)
+    .replace(/Figma/gi, primaryTech)
+    .replace(/YAML/gi, primaryTech)
+    .replace(/Jira/gi, 'Jira')
+    .replace(/Excel/gi, primaryTech);
+
+  // Customize fixes
+  const dynamicFixPool = [
+    `Delete the word '${primaryBuzz}' from your profile and replace it with an actual metric of value.`,
+    `Stop listing '${primaryTech}' if your experience with it is limited to looking at a tutorial homepage.`,
+    `Write a bio that sounds like a human wrote it, not an AI prompted with 'make me sound professional'.`,
+    `Remove '${primaryTech}' and '${secondaryTech}' from your headline unless you can write a script in them in under 5 minutes.`,
+    `Delete the dramatic one-sentence paragraphs. You are a ${title}, not a LinkedIn influencer.`
+  ];
+
+  const selectedFixes: string[] = [];
+  const fixPoolCopy = [...dynamicFixPool];
+  for (let i = 0; i < 2; i++) {
+    const idx = Math.floor(random() * fixPoolCopy.length);
+    selectedFixes.push(fixPoolCopy.splice(idx, 1)[0]);
+  }
+
+  const customizedPersonaFixes = basePersona.fixes.map(fix => {
+    return fix
+      .replace(/React/gi, primaryTech)
+      .replace(/Tailwind/gi, primaryTech)
+      .replace(/Figma/gi, primaryTech)
+      .replace(/Terraform/gi, primaryTech)
+      .replace(/SQL/gi, primaryTech)
+      .replace(/Python/gi, primaryTech)
+      .replace(/Excel/gi, primaryTech)
+      .replace(/Slack/gi, 'Slack');
+  });
+
+  for (const fix of customizedPersonaFixes) {
+    if (selectedFixes.length < 5) {
+      selectedFixes.push(fix);
+    }
+  }
+
+  // Calculate a dynamic score seeded by input
+  const baseScore = basePersona.score;
+  const scoreOffset = Math.floor(random() * 3) - 1; // -1, 0, or 1
+  const finalScore = Math.max(1, Math.min(10, baseScore + scoreOffset));
+
+  return {
+    one_liner: oneLiner,
+    roast_lines: Array.from(new Set(finalRoastLines)).slice(0, 6),
+    fixes: Array.from(new Set(selectedFixes)).slice(0, 5),
+    score: finalScore
+  };
+}
+
+function generateDynamicHired(
+  details: ReturnType<typeof extractProfileDetails>,
+  random: () => number,
+  baseProfile: typeof HIRED_PROFILES[0]
+) {
+  const primaryTech = details.techs[0];
+  const title = details.title;
+
+  const customizedLines = baseProfile.roast_lines.map(line => {
+    return line
+      .replace(/GitHub/gi, 'GitHub')
+      .replace(/tech stacks/gi, `${primaryTech} stacks`);
+  });
+
+  const dynamicHiredLines = [
+    `Your experience with ${primaryTech} actually looks practical, not just theoretical book learning.`,
+    `Successfully avoided adding unnecessary buzzwords to your ${title} description. A rare sight.`,
+    `A ${title} who writes clean code and lists concrete results instead of empty philosophies.`
+  ];
+
+  const selectedHiredLines: string[] = [];
+  const pool = [...customizedLines];
+  for (let i = 0; i < 3; i++) {
+    if (pool.length > 0) {
+      const idx = Math.floor(random() * pool.length);
+      selectedHiredLines.push(pool.splice(idx, 1)[0]);
+    }
+  }
+  
+  const dynamicPool = [...dynamicHiredLines];
+  for (let i = 0; i < 2; i++) {
+    const idx = Math.floor(random() * dynamicPool.length);
+    selectedHiredLines.push(dynamicPool.splice(idx, 1)[0]);
+  }
+
+  const baseScore = baseProfile.score;
+  const scoreOffset = Math.floor(random() * 2); // 0 or 1
+  const finalScore = Math.max(8, Math.min(10, baseScore + scoreOffset));
+
+  return {
+    ...baseProfile,
+    score: finalScore,
+    roast_lines: Array.from(new Set(selectedHiredLines)).slice(0, 5)
+  };
+}
+
 /**
  * Service to process LinkedIn profiles.
  * Seamlessly integrates local mock engine and live AWS Bedrock.
- */export async function roastProfile(
+ */
+export async function roastProfile(
   input: { type: 'url'; data: string } | { type: 'file'; name: string; content: string } | { type: 'text'; data: string },
   outcome: TargetOutcome = 'random'
 ): Promise<RoastResult> {
@@ -359,10 +597,11 @@ function hashString(str: string): number {
       }
 
       return await response.json();
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error("AWS Gateway fetch failed:", error);
       // Re-throw the error so that the user receives accurate real-time feedback in the UI about quota or permissions!
-      throw new Error(error.message || "Failed to communicate with live AI backend");
+      const err = error instanceof Error ? error : new Error(String(error));
+      throw new Error(err.message || "Failed to communicate with live AI backend", { cause: error });
     }
   }
 
@@ -370,8 +609,8 @@ function hashString(str: string): number {
   await new Promise((resolve) => setTimeout(resolve, 2500));
 
   // Determine key content and extract handle
-  let handle = '';
-  let searchContent = '';
+  let handle: string;
+  let searchContent: string;
 
   if (input.type === 'url') {
     searchContent = input.data.toLowerCase();
@@ -386,8 +625,13 @@ function hashString(str: string): number {
     searchContent = `${input.name} ${input.content}`.toLowerCase();
     handle = input.name.replace(/\.[^/.]+$/, '').trim(); // Remove file extension
   }
+
+  const details = extractProfileDetails(searchContent);
+  const hashKey = input.type === 'text' ? searchContent : (handle || 'default');
+  const random = createRandom(hashKey);
+
   // If user explicitly chose "Hired" OR (chose Random and hits the 15% random chance)
-  const resolveAsHired = outcome === 'hired' || (outcome === 'random' && Math.random() < 0.15);
+  const resolveAsHired = outcome === 'hired' || (outcome === 'random' && random() < 0.15);
   
   // 1. Scan and score each persona based on matched keywords
   const personaMatches: Array<{
@@ -414,126 +658,28 @@ function hashString(str: string): number {
   personaMatches.sort((a, b) => b.score - a.score);
 
   if (outcome === 'roasted' || !resolveAsHired) {
+    let selectedRoast: typeof ROAST_PERSONAS[0];
     if (personaMatches.length > 0) {
-      const primary = personaMatches[0];
-      const secondary = personaMatches[1] || null;
-
-      // Compile dynamic roast lines
-      const dynamicRoastLines: string[] = [];
-      const dynamicFixes: string[] = [];
-
-      // Add primary roast lines (up to 3)
-      dynamicRoastLines.push(...primary.persona.roast_lines.slice(0, 3));
-      dynamicFixes.push(...primary.persona.fixes.slice(0, 3));
-
-      // If secondary exists, take up to 2 from secondary for a rich combined profile roast!
-      if (secondary) {
-        dynamicRoastLines.push(...secondary.persona.roast_lines.slice(0, 2));
-        dynamicFixes.push(...secondary.persona.fixes.slice(0, 2));
-      }
-
-      // Now, let's inject hyper-targeted items for specific high-value keywords!
-      if (searchContent.includes('aws') || searchContent.includes('lambda')) {
-        if (searchContent.includes('sagemaker') || searchContent.includes('pytorch') || searchContent.includes('tensorflow')) {
-          dynamicRoastLines.push(
-            "Brags about serverless ML deployments using Lambda & SageMaker, but your functions probably cold-start for 20 seconds loading PyTorch containers."
-          );
-        } else {
-          dynamicRoastLines.push(
-            "Architecting AWS solutions using S3 and Lambda is just a fancy way of saying you write glue code for cloud-hosted bucket triggers."
-          );
-        }
-        dynamicFixes.push("Prune your AWS Lambda zip sizes and bundle dependencies to avoid 15-second cold starts.");
-      }
-
-      if (searchContent.includes('quicksight')) {
-        dynamicRoastLines.push(
-          "Boasting about 'real-time analytics with QuickSight' is a bold choice. We all know QuickSight is just slow-loading Excel charts with an enterprise licensing fee."
-        );
-        dynamicFixes.push("Stop paying for QuickSight licenses just to draw pie charts that could have been a static markdown table.");
-      }
-
-      if (searchContent.includes('sagemaker') && !searchContent.includes('aws')) {
-        dynamicRoastLines.push(
-          "You love SageMaker mostly because it lets you burn through company cloud computing budgets while waiting for a single training epoch."
-        );
-      }
-
-      if (searchContent.includes('devops') && (searchContent.includes('ci/cd') || searchContent.includes('docker'))) {
-        dynamicRoastLines.push(
-          "Your CI/CD pipelines look like an absolute crime scene of failed GitHub Action runs with names like 'fix devops config v14'."
-        );
-        dynamicFixes.push("Stop naming your git commits 'fix yaml config' and learn to test your docker builds locally.");
-      }
-
-      // Ensure we have unique roast lines and at least 5-6 points!
-      const uniqueRoastLines = Array.from(new Set(dynamicRoastLines));
-      const uniqueFixes = Array.from(new Set(dynamicFixes));
-
-      // Pad roast lines up to 6 if they are fewer
-      let fallbackIdx = 0;
-      while (uniqueRoastLines.length < 6 && primary.persona.roast_lines.length > 0) {
-        const line = primary.persona.roast_lines[fallbackIdx % primary.persona.roast_lines.length];
-        if (!uniqueRoastLines.includes(line)) {
-          uniqueRoastLines.push(line);
-        }
-        fallbackIdx++;
-        if (fallbackIdx > 12) break; // break loops
-      }
-
-      // Pad fixes up to 5 if they are fewer
-      fallbackIdx = 0;
-      while (uniqueFixes.length < 5 && primary.persona.fixes.length > 0) {
-        const fix = primary.persona.fixes[fallbackIdx % primary.persona.fixes.length];
-        if (!uniqueFixes.includes(fix)) {
-          uniqueFixes.push(fix);
-        }
-        fallbackIdx++;
-        if (fallbackIdx > 12) break; // break loops
-      }
-
-      return {
-        verdict: primary.persona.verdict,
-        score: primary.persona.score,
-        one_liner: primary.persona.one_liner,
-        roast_lines: uniqueRoastLines.slice(0, 6),
-        fixes: uniqueFixes.slice(0, 5),
-      };
+      selectedRoast = personaMatches[0].persona;
+    } else {
+      const index = Math.floor(random() * ROAST_PERSONAS.length);
+      selectedRoast = ROAST_PERSONAS[index];
     }
 
-    // 2. Fallback Hashing Router if no keywords match
-    const hashKey = input.type === 'text' ? searchContent : (handle || 'default');
-    const index = hashString(hashKey) % ROAST_PERSONAS.length;
-    const selectedRoast = ROAST_PERSONAS[index];
+    const dynamicRoast = generateDynamicRoast(details, random, selectedRoast);
 
     return {
       verdict: selectedRoast.verdict,
-      score: selectedRoast.score,
-      one_liner: selectedRoast.one_liner,
-      roast_lines: [...selectedRoast.roast_lines],
-      fixes: [...selectedRoast.fixes],
+      score: dynamicRoast.score,
+      one_liner: dynamicRoast.one_liner,
+      roast_lines: dynamicRoast.roast_lines,
+      fixes: dynamicRoast.fixes
     };
   }
 
   // Otherwise, resolve as Hired
-  const hashKey = input.type === 'text' ? searchContent : (handle || 'default');
-  const hiredIndex = hashString(hashKey) % HIRED_PROFILES.length;
+  const hiredIndex = Math.floor(random() * HIRED_PROFILES.length);
   const hiredProfile = HIRED_PROFILES[hiredIndex];
 
-  // Make hired profiles similarly rich
-  if (personaMatches.length > 0) {
-    const primary = personaMatches[0];
-    const customizedRoasts = [...hiredProfile.roast_lines];
-    if (primary.persona.id === 'data-scientist') {
-      customizedRoasts.unshift("Your machine learning skills actually solve business problems, unlike most who just draw boxes in Jupyter.");
-    } else if (primary.persona.id === 'yaml-engineer') {
-      customizedRoasts.unshift("You actually understand DevOps and infrastructure, rather than just writing generic Terraform copy-pastes.");
-    }
-    return {
-      ...hiredProfile,
-      roast_lines: Array.from(new Set(customizedRoasts)).slice(0, 5)
-    };
-  }
-
-  return hiredProfile;
+  return generateDynamicHired(details, random, hiredProfile);
 }
