@@ -62,8 +62,9 @@ exports.handler = async (event) => {
     let profileText = "";
 
     if (type === "file") {
-      // PDF File Upload flow: Expects data to be base64-encoded PDF string
-      console.log(`Processing file: ${fileName || "LinkedIn Resume Export"}`);
+      // DEPRECATED: Standard PDF parsing has been migrated to client-side extraction in the frontend to avoid AWS Textract fees/latency.
+      // This path remains as a legacy fallback.
+      console.log(`[DEPRECATED BACKEND PARSE] Processing file: ${fileName || "LinkedIn Resume Export"}`);
       const pdfBytes = Buffer.from(data, "base64");
 
       // Invoke AWS Textract to parse the PDF document's text content

@@ -1,6 +1,10 @@
-import React, { useState } from 'react';
-import { Sparkles, Skull, HelpCircle, Shield, Award } from 'lucide-react';
+import React, { useState, useRef } from 'react';
+import { Sparkles, Skull, HelpCircle, Shield, Award, Upload, Loader2, CheckCircle2, AlertCircle } from 'lucide-react';
 import type { TargetOutcome } from '../services/roastService';
+import * as pdfjs from 'pdfjs-dist';
+
+// Configure PDF.js worker
+pdfjs.GlobalWorkerOptions.workerSrc = `https://cdn.jsdelivr.net/npm/pdfjs-dist@${pdfjs.version}/build/pdf.worker.min.mjs`;
 
 interface LandingPageProps {
   onSubmit: (
@@ -13,6 +17,90 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSubmit }) => {
   const [outcome, setOutcome] = useState<TargetOutcome>('random');
   const [profileText, setProfileText] = useState('');
   const [textError, setTextError] = useState<string | null>(null);
+
+  // New file upload / parsing state
+  const [isDragging, setIsDragging] = useState(false);
+  const [isParsing, setIsParsing] = useState(false);
+  const [parseError, setParseError] = useState<string | null>(null);
+  const [parseSuccess, setParseSuccess] = useState<string | null>(null);
+  const fileInputRef = useRef<HTMLInputElement>(null);
+
+  const parsePDF = async (file: File) => {
+    setIsParsing(true);
+    setParseError(null);
+    setParseSuccess(null);
+
+    try {
+      const reader = new FileReader();
+      
+      const fileReadPromise = new Promise<ArrayBuffer>((resolve, reject) => {
+        reader.onload = () => resolve(reader.result as ArrayBuffer);
+        reader.onerror = () => reject(new Error("Failed to read file"));
+        reader.readAsArrayBuffer(file);
+      });
+
+      const arrayBuffer = await fileReadPromise;
+      const loadingTask = pdfjs.getDocument({ data: arrayBuffer });
+      const pdf = await loadingTask.promise;
+      
+      let extractedText = '';
+      for (let i = 1; i <= pdf.numPages; i++) {
+        const page = await pdf.getPage(i);
+        const textContent = await page.getTextContent();
+        const pageText = textContent.items
+          .map((item: any) => ('str' in item ? item.str : ''))
+          .join(' ');
+        extractedText += pageText + '\n';
+      }
+
+      const cleanExtractedText = extractedText.trim();
+      if (!cleanExtractedText) {
+        throw new Error("We couldn't extract any text content from this PDF. It might be scanned/image-only.");
+      }
+
+      setProfileText(cleanExtractedText);
+      setParseSuccess(`Successfully extracted text from "${file.name}" (${pdf.numPages} pages)!`);
+    } catch (err: any) {
+      console.error("PDF Parsing Error: ", err);
+      setParseError(err.message || "An error occurred while reading the PDF file.");
+    } finally {
+      setIsParsing(false);
+    }
+  };
+
+  const handleDragOver = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(true);
+  };
+
+  const handleDragLeave = () => {
+    setIsDragging(false);
+  };
+
+  const handleDrop = (e: React.DragEvent) => {
+    e.preventDefault();
+    setIsDragging(false);
+    
+    const file = e.dataTransfer.files[0];
+    if (file) {
+      if (file.type !== 'application/pdf' && !file.name.endsWith('.pdf')) {
+        setParseError("Only PDF files are supported! Please upload a PDF resume or LinkedIn export.");
+        return;
+      }
+      parsePDF(file);
+    }
+  };
+
+  const handleFileChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (file) {
+      parsePDF(file);
+    }
+  };
+
+  const triggerFileInput = () => {
+    fileInputRef.current?.click();
+  };
 
   const handleTextSubmit = (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +192,67 @@ export const LandingPage: React.FC<LandingPageProps> = ({ onSubmit }) => {
 
         {/* Text Input Form */}
         <form onSubmit={handleTextSubmit} className="space-y-4 animate-[fadeIn_0.3s_ease-out]">
+          {/* PDF Drag & Drop Zone */}
+          <div className="space-y-2">
+            <label className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block text-left">
+              Resume Upload (PDF)
+            </label>
+            <div
+              onDragOver={handleDragOver}
+              onDragLeave={handleDragLeave}
+              onDrop={handleDrop}
+              onClick={triggerFileInput}
+              className={`border-2 border-dashed rounded-xl p-5 text-center cursor-pointer transition-all duration-300 flex flex-col items-center justify-center gap-2 group relative overflow-hidden select-none ${
+                isDragging
+                  ? 'border-kawaii-pink bg-kawaii-pink/10 shadow-[0_0_15px_rgba(255,107,157,0.1)]'
+                  : 'border-white/10 bg-[#0d0d0d] hover:border-kawaii-pink/40 hover:bg-[#121212]'
+              }`}
+            >
+              <input
+                type="file"
+                ref={fileInputRef}
+                onChange={handleFileChange}
+                accept=".pdf,application/pdf"
+                className="hidden"
+              />
+              
+              {isParsing ? (
+                <>
+                  <Loader2 className="w-8 h-8 text-kawaii-pink animate-spin" />
+                  <span className="text-xs font-bold text-gray-300">Parsing PDF content...</span>
+                  <span className="text-[10px] text-gray-500">Extracting text locally on your device</span>
+                </>
+              ) : (
+                <>
+                  <Upload className={`w-8 h-8 transition-transform duration-300 group-hover:-translate-y-0.5 ${
+                    isDragging ? 'text-kawaii-pink' : 'text-gray-500 group-hover:text-kawaii-pink'
+                  }`} />
+                  <span className="text-xs font-bold text-gray-300">
+                    {isDragging ? 'Drop your PDF here!' : 'Drag & drop your LinkedIn PDF resume here'}
+                  </span>
+                  <span className="text-[10px] text-gray-500 font-medium">
+                    Or click to browse files (Instant, offline client-side extraction)
+                  </span>
+                </>
+              )}
+            </div>
+          </div>
+
+          {/* Success and Error feedback for PDF parsing */}
+          {parseSuccess && (
+            <div className="py-2.5 px-3 rounded-lg border border-kawaii-green/20 bg-kawaii-green/5 text-kawaii-green text-xs font-semibold flex items-center gap-2 text-left animate-[fadeIn_0.2s_ease-out]">
+              <CheckCircle2 className="w-4 h-4 shrink-0" />
+              <span>{parseSuccess}</span>
+            </div>
+          )}
+
+          {parseError && (
+            <div className="py-2.5 px-3 rounded-lg border border-red-500/20 bg-red-500/5 text-red-400 text-xs font-semibold flex items-center gap-2 text-left animate-shake">
+              <AlertCircle className="w-4 h-4 shrink-0" />
+              <span>{parseError}</span>
+            </div>
+          )}
+
           <div className="space-y-2">
             <label htmlFor="linkedin-about-text" className="text-[10px] font-bold text-gray-500 uppercase tracking-widest block text-left">
               LinkedIn About Section / Profile Text
